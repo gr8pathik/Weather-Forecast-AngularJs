@@ -5,9 +5,6 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bootstrap 101 Template</title>
-
-    <!-- Bootstrap -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -27,9 +24,9 @@
     <div class="header-main">
       <form ng-submit="loadForecast();" method="GET">
         <div id="panel">
-          <input name="location" class="search" ng-model="cityName" placeholder="Type city.." required />
-          <input type="submit" name="search" class="searchbtn" value="{{searchButtonText}}" />
-          <input type="submit" name="button" class="searchbtn" value="Current City" />
+          <input name="location" ng-disabled="{{loading}}" class="search" ng-model="cityName" placeholder="Type city.." required />
+          <input type="submit" name="search" class="searchbtn" value="{{(loading)?'Fetching...':'Search'}}" />
+          <input type="button" name="button" ng-click="getCurrentLocation();" class="searchbtn" value="Current City" />
         </div>        
       </form> 
     </div>
@@ -37,150 +34,95 @@
   <!-- End of Header -->
 
   <!-- Content -->
-  <div id="content">    
-    <ul class="tab-menu">
-      <li ng-repeat="city in cities"><a ng-click="">{{city.name}}</a></li>
-    </ul>
-    <h3 class='cityname'>{{cityTitle}}</h3>
-    <ul class='opt-menu'>
-      <li class='opt'>
-        <a href'#'>
-          <img src='img/options.png' width='16' height='16' />
-        </a>
-        <ul>
-          <li>
-            <a href='javascript:void(0);' class='tempformat' title='Switch to Fahrenheit' alt='Switch to Celsius' onClick="SetCookie('tempformat','si','7'); ">&#176;C</a>
-          </li>
-          <li>
-            <a href='javascript:void(0);' class='tempformat' title='Make default' alt='Make default' onClick="SetCookie('defaultcity',609,'7'); ">Make default city</a>
-          </li>
-        </ul>
-      </li>
-    </ul>    
-    <!-- Weather information -->
-    <div class="slider responsive">
+  <div id="content">
+    <div class="default-content" ng-show="isEmpty(forecast)">
+      Search City
+    </div>
+    <div class="inner-content" ng-show="!isEmpty(forecast)">
+      <ul class="tab-menu">
+        <li ng-repeat="city in cities"><a ng-click="getForecast(city.id, 'id');" ng-class="(city.id == currentForecast)?'active':''">{{city.name}}</a></li>
+      </ul>
+      <h3 class='cityname'>{{cityTitle}} <span class="latlong">(Lat : {{cities[currentForecast].coord.lat}}, Long : {{cities[currentForecast].coord.lon}})</h3>    
+      <!-- Weather information -->
       <div class="info">
         <ul>
           <li class="info-tab" style="display: list-item;">
             <ul class="info-meta">
               <!-- Currently weather -->
               <li ng-class="($first) ? 'first' : 'other'" ng-repeat="forecast in forecast[currentForecast].list">
-                <span class='daydatetime'>{{forecast.dt * 1000 | date : 'fullDate'}}</span>
-                <div class="temperature">
-                  <div class="fl">
-                    <div class="sign-wrapper">
-                      <i class="icon-js">{{forecast.weather[0].description}}</i>
-                      <img src="http://openweathermap.org/img/w/{{forecast.weather[0].icon}}.png" alt="" class="" width="64" height="64" />
+                <div ng-if="$first">
+                  <span class='daydatetime'>{{forecast.dt * 1000 | date : 'fullDate'}}</span>
+                  <div class="temperature">
+                    <div class="fl">
+                      <div class="sign-wrapper">
+                        <i class="icon-js">{{forecast.weather[0].description | capitalize}}</i>
+                        <img src="http://openweathermap.org/img/w/{{forecast.weather[0].icon}}.png" alt="" class="" width="64" height="64" />
+                      </div>
+                    </div>
+                    <div class="fr">
+                      <div class="gradus">
+                        <span class="celsius">&#176; {{metric}}</span>
+                        <span class="number">{{getDayTemprature(forecast.temp.day)}}</span>
+                      </div>
                     </div>
                   </div>
-                  <div class="fr">
-                    <div class="gradus">
-                      <span class="celsius">{{metricText}}</span>
-                      <span class="number">{{getDayTemprature(forecast.temp.day)}}</span>
-                    </div>
+                  <div class="discription">{{forecast.weather[0].description | capitalize}}</div>
+                  <span class="minMaxTemp">
+                    <span class="min" title="Minumum Temprature">{{getDayTemprature(forecast.temp.min)}}&#176;</span> / 
+                    <span class="max" title="Maximum Temprature">{{getDayTemprature(forecast.temp.max)}}&#176;
+                    </span>
+                  </span>
+                  <div class="other">
+                    <span class="humidity">
+                      <img src="img/icons/humidity.png" width="32" height="32" title="Humidity" class="icon" />
+                      <span class="point">{{forecast.humidity}}</span>%
+                    </span>               
+                    <span class="cloud">
+                      <img src="img/icons/cloudy.png" width="32" height="32" title="Cloud cover" class="icon" />
+                      <span class="point">{{forecast.clouds}}</span>%
+                    </span>
+                    <span class="wind">
+                      <img src='img/icons/windImgN.png' width='32' height='32' title='Speed' class='icon' /> <span class='point'>{{forecast.speed}}m/s</span>               </span>
+                    <span class="rainpos">
+                      <img src="img/icons/posrain.png" width="32" height="32" title="Pressure" class="icon" />
+                      <span class="point">{{(forecast.pressure / 100) | number : 0}}%</span>
+                    </span>
+
                   </div>
                 </div>
-                <div class="discription">{{forecast.weather[0].description}}</div>
-                <div class="windchill">Feels like <span class="point">55</span>&#176; F</div>
-                <div class="other">
-                  <span class="humidity">
-                    <img src="img/icons/humidity.png" width="32" height="32" title="Humidity" class="icon" />
-                    <span class="point">{{forecast.humidity}}</span>%
-                  </span>               
-                  <span class="cloud">
-                    <img src="img/icons/cloudy.png" width="32" height="32" title="Cloud cover" class="icon" />
+                <div ng-if="!$first" class="meta-wrapper">
+                  <span class='daydatetime'>{{forecast.dt * 1000 | date : 'EEEE, MMMM d, y'}}</span>
+                  <span class="sign-wrapper popup">
+                    <i class="more-info">i</i>
+                    <img src="http://openweathermap.org/img/w/{{forecast.weather[0].icon}}.png" alt="" class="" width="64" height="64" />
+                  </span>
+                  <div class="fr">
+                    <div class="gradus">
+                      <span class="number">{{getDayTemprature(forecast.temp.day)}}</span>
+                      <span class="celsius">&#176; {{metric}}</span>
+                    </div>
+                  </div>
+                  <span class="title">{{forecast.weather[0].description | capitalize}}</span>
+                  <span class="temperature">
+                    <span class="min" title="Minumum Temprature">{{getDayTemprature(forecast.temp.min)}}&#176;</span> / 
+                    <span class="max" title="Maxiumum Temprature">{{getDayTemprature(forecast.temp.max)}}&#176;
+                    </span>
+                  </span>
+                  <span class="humidity-cloud">
+                    <img src="img/icons/humidity.png" width="24" height="24" title="Humidity" class="icon" />
+                    <span class="point">{{forecast.humidity}}</span>%&nbsp;&nbsp;&nbsp;
+                    <img src="img/icons/cloudy.png" width="24" height="24" title="Cloud cover" class="icon" />
                     <span class="point">{{forecast.clouds}}</span>%
                   </span>
-                  <span class="wind">
-                    <img src='img/icons/windImgN.png' width='32' height='32' title='North' class='icon' /> <span class='point'>7.1m/h</span>               </span>
-                  <span class="rainpos">
-                    <img src="img/icons/posrain.png" width="32" height="32" title="Rain possibility" class="icon" />
-                    <span class="point">0%</span>
+                  <span class="humidity-cloud">
+                    <img src="img/icons/windImgN.png" width="24" height="24" title="Speed" class="icon" />
+                    <span class="point">{{forecast.speed | number:0}} m/s</span>
+                    <img src="img/icons/posrain.png" width="24" height="24" title="Pressure" class="icon" />
+                    <span class="point">{{(forecast.pressure / 100) | number:0}}%</span>
                   </span>
-
                 </div>
               </li>
               <!-- End Currently weather -->
-              
-              <!-- Other day -->
-              <!-- <li class="other">
-                <div class="meta-wrapper">
-                  <span class='daydatetime'>Tomorrow <br>Tue 08.07.14</span>                <span class="sign-wrapper popup">
-                    <i class="more-info">i</i>
-                    <i class="icon-js">partly-cloudy-night</i>
-                    <canvas id="icon1" width="64" height="64"></canvas>
-                    <aside>
-                      <span class='point popup-windpos'><img src='img/icons/windImgN.png' width='32' height='32' title='North' class='icon' /> <span class='point'>14.3m/h</span></span><span class='point'><img src='img/icons/posrain.png' width='32' height='32' />0%</span>                  </aside>
-                  </span>
-                  <span class="title">Partly cloudy throughout the day.</span>
-                  <span class="temperature">
-                    <span class="min">
-                      48&#176;</span> / 
-                    <span class="max">
-                      56&#176;
-                    </span>
-                  </span>
-                  <span class="humidity-cloud">
-                    <img src="img/icons/humidity.png" width="24" height="24" title="Humidity" class="icon" />
-                    <span class="point">79</span>%&nbsp;&nbsp;&nbsp;
-                    <img src="img/icons/cloudy.png" width="24" height="24" title="Cloud cover" class="icon" />
-                    <span class="point">47</span>%
-                  </span>
-                </div>
-              </li>
-
-              <li class="other">
-                <div class="meta-wrapper">
-                  <span class='daydatetime'>Day after tomorrow <br>Wed 09.07.14</span>                <span class="sign-wrapper popup">
-                    <i class="more-info">i</i>                
-                    <i class="icon-js">partly-cloudy-night</i>
-                    <canvas id="icon2" width="64" height="64"></canvas>
-                    <aside>
-                      <span class='point popup-windpos'><img src='img/icons/windImgNW.png' width='32' height='32' title='North-West' class='icon' /> <span class='point'>11.6m/h</span></span><span class='point'><img src='img/icons/posrain.png' width='32' height='32' />0%</span>                 </aside>
-                  </span>
-                  <span class="title">Light rain starting in the afternoon.</span>
-                  <span class="temperature">
-                    <span class="min">
-                      47&#176;</span> / 
-                    <span class="max">
-                      50&#176;
-                    </span>
-                  </span>
-                  <span class="humidity-cloud">
-                    <img src="img/icons/humidity.png" width="24" height="24" title="Humidity" class="icon" />
-                    <span class="point">82</span>%&nbsp;&nbsp;&nbsp;
-                    <img src="img/icons/cloudy.png" width="24" height="24" title="Cloud cover" class="icon" />
-                    <span class="point">78</span>%
-                  </span>
-                </div>
-              </li>
-
-              <li class="other">
-                <div class="meta-wrapper">
-                  <span class='daydatetime'>Thursday <br> 10.07.14</span>               <span class="sign-wrapper popup">
-                    <i class="more-info">i</i>                
-                    <i class="icon-js">partly-cloudy-night</i>
-                    <canvas id="icon3" width="64" height="64"></canvas>
-                    <aside>
-                      <span class='point popup-windpos'><img src='img/icons/windImgW.png' width='32' height='32' title='West' class='icon' /> <span class='point'>13.5m/h</span></span><span class='point'><img src='img/icons/posrain.png' width='32' height='32' />0%</span>                  </aside>
-                  </span>
-                  <span class="title">Light rain until evening.</span>
-                  <span class="temperature">
-                    <span class="min">
-                      49&#176;</span> / 
-                    <span class="max">
-                      53&#176;
-                    </span>
-                  </span>
-                  <span class="humidity-cloud">
-                    <img src="img/icons/humidity.png" width="24" height="24" title="Humidity" class="icon" />
-                    <span class="point">88</span>%&nbsp;&nbsp;&nbsp;
-                    <img src="img/icons/cloudy.png" width="24" height="24" title="Cloud cover" class="icon" />
-                    <span class="point">89</span>%
-                  </span>
-                </div>
-              </li> -->
-              <!-- End of Other day -->
             </ul>
           </li>
         </ul>     
@@ -188,111 +130,7 @@
     </div>
     <!-- End of weather information -->
     <div class="clear"></div>
-  
-  <!-- Next 12 hours charts -->
-  <div id="container" style="min-width: 310px; height: 400px; margin:60px auto 0 auto"></div>
-  
-  </div>
-  <!-- End Content -->
-  
-  <div class="paper-line"></div>
 </div>
-    <div class="container" ng-controller="weatherCtrl">
-      <h1>Weather Forecast</h1>
-      <div class="row">
-        <div class="col-lg-8 input-group">
-          <input type="text" class="form-control" ng-model="cityName" placeholder="City name">
-          <span class="input-group-btn">
-            <button class="btn btn-primary" ng-click="loadForecast();" type="button">{{searchButtonText}}</button>
-          </span>
-        </div><!-- /input-group -->
-      </div>
-      <div class="row">
-          <h2>
-              {{cityTitle}}</h2>
-              <ul>
-                <li ng-repeat="city in cities">{{city}}</li>
-              </ul>
-          <div class="col-md-6">
-              <div class="blockquote-box clearfix" ng-repeat="forecast in forecast[currentForecast].list">
-                  <div class="square pull-left">
-                      <img src="http://openweathermap.org/img/w/{{forecast.weather[0].icon}}.png" alt="" class="" />
-                  </div>
-                  <h4>
-                      {{forecast.dt * 1000 | date : 'fullDate'}}</h4>
-                  <p>
-                      <b>{{forecast.weather[0].main | uppercase}}</b>
-                      <i>{{forecast.weather[0].description}}</i>
-                      <i>Presure {{forecast.pressure}}</i>
-                      <i>Humidity {{forecast.humidity}}</i>
-                      <b>Temp Day: {{forecast.temp.day - 273.15 | number : 2}} &#176;C</b>
-                      <b>Temp night: {{forecast.temp.night - 273.15 | number : 2}} &#176;C</b>
-                      <b>Temp eve: {{forecast.temp.eve - 273.15 | number : 2}} &#176;C</b>
-                      <b>Temp morn: {{forecast.temp.morn - 273.15 | number : 2}} &#176;C</b>
-                      <b>Min : {{forecast.temp.min - 273.15 | number : 2}} &#176;C</b>
-                      <b>Max : {{forecast.temp.max - 273.15 | number : 2}} &#176;C</b>
-                  </p>
-              </div>
-              <div class="blockquote-box blockquote-primary clearfix">
-                  <div class="square pull-left">
-                      <span class="glyphicon glyphicon-music glyphicon-lg"></span>
-                  </div>
-                  <h4>
-                      Let's music play</h4>
-                  <p>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a
-                      ante. <a href="http://www.jquery2dotnet.com/search/label/jquery">jquery2dotnet</a>
-                  </p>
-              </div>
-              <div class="blockquote-box blockquote-success clearfix">
-                  <div class="square pull-left">
-                      <span class="glyphicon glyphicon-tree-conifer glyphicon-lg"></span>
-                  </div>
-                  <h4>
-                      Tree conifer</h4>
-                  <p>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a
-                      ante.
-                  </p>
-              </div>
-          </div>
-          <div class="col-md-6">
-              <div class="blockquote-box blockquote-info clearfix">
-                  <div class="square pull-left">
-                      <span class="glyphicon glyphicon-info-sign glyphicon-lg"></span>
-                  </div>
-                  <h4>
-                      Information</h4>
-                  <p>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a
-                      ante.
-                  </p>
-              </div>
-              <div class="blockquote-box blockquote-warning clearfix">
-                  <div class="square pull-left">
-                      <span class="glyphicon glyphicon-warning-sign glyphicon-lg"></span>
-                  </div>
-                  <h4>
-                      Warning</h4>
-                  <p>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a
-                      ante.
-                  </p>
-              </div>
-              <div class="blockquote-box blockquote-danger clearfix">
-                  <div class="square pull-left">
-                      <span class="glyphicon glyphicon-record glyphicon-lg"></span>
-                  </div>
-                  <h4>
-                      Danger</h4>
-                  <p>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer posuere erat a
-                      ante.
-                  </p>
-              </div>
-          </div>
-      </div>
-  </div>
   <!-- Angular js Core file -->
   <script type="text/javascript" src="js/angular.min.js"></script>
   <!-- Application File -->
